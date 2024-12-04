@@ -1,31 +1,33 @@
-import { useState } from "react";
-import { Link, router } from "expo-router";
+import { useEffect } from "react";
 import {
   StyleSheet,
   View,
   Text,
-  TextInput,
+  FlatList,
+  Image,
   TouchableOpacity,
-  Alert,
+  ActivityIndicator,
+  Dimensions,
 } from "react-native";
+import { Link } from "expo-router";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { useMusicStore } from "@/hooks/useMusicStore";
 
-const VALID_USER = "admin";
-const VALID_PASSWORD = "password123";
-
-export default function LoginScreen() {
+export default function MusicListScreen() {
   const colorScheme = useColorScheme();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { songs, fetchSongs } = useMusicStore();
 
-  const handleLogin = () => {
-    if (username === VALID_USER && password === VALID_PASSWORD) {
-      setIsLoggedIn(true);
-    } else {
-      Alert.alert("Error", "Usuario o contraseña incorrectos");
-    }
-  };
+  useEffect(() => {
+    fetchSongs();
+  }, []);
+
+  if (songs.length === 0) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6200ee" />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -34,101 +36,45 @@ export default function LoginScreen() {
         { backgroundColor: colorScheme === "dark" ? "#000" : "#fff" },
       ]}
     >
-      {!isLoggedIn ? (
-        <>
-          <Text
-            style={[
-              styles.title,
-              { color: colorScheme === "dark" ? "#fff" : "#000" },
-            ]}
+      <FlatList
+        data={songs}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <Link
+            href={{
+              pathname: "/player",
+              params: { songId: item.id },
+            }}
+            asChild
           >
-            Login
-          </Text>
-
-          <Text
-            style={[
-              styles.infoText,
-              { color: colorScheme === "dark" ? "#fff" : "#000" },
-            ]}
-          >
-            Usuario: admin{"\n"}
-            Contraseña: password123
-          </Text>
-
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: colorScheme === "dark" ? "#fff" : "#000",
-                color: colorScheme === "dark" ? "#fff" : "#000",
-              },
-            ]}
-            placeholder="Usuario"
-            placeholderTextColor={colorScheme === "dark" ? "#888" : "#666"}
-            value={username}
-            onChangeText={setUsername}
-          />
-
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: colorScheme === "dark" ? "#fff" : "#000",
-                color: colorScheme === "dark" ? "#fff" : "#000",
-              },
-            ]}
-            placeholder="Contraseña"
-            placeholderTextColor={colorScheme === "dark" ? "#888" : "#666"}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Iniciar Sesión</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <View style={styles.menuContainer}>
-          <Text
-            style={[
-              styles.title,
-              { color: colorScheme === "dark" ? "#fff" : "#000" },
-            ]}
-          >
-            Menu Principal
-          </Text>
-
-          <View style={styles.buttonContainer}>
-            <Link href="/temp" asChild>
-              <TouchableOpacity style={styles.button}>
-                <Text style={styles.buttonText}>
-                  Convertidor de Temperatura
+            <TouchableOpacity style={styles.songItem}>
+              <Image
+                source={{ uri: item.image }}
+                style={styles.thumbnail}
+                defaultSource={require("../../assets/default-album.png")}
+              />
+              <View style={styles.songInfo}>
+                <Text
+                  style={[
+                    styles.title,
+                    { color: colorScheme === "dark" ? "#fff" : "#000" },
+                  ]}
+                >
+                  {item.title}
                 </Text>
-              </TouchableOpacity>
-            </Link>
-
-            <Link href="/rockpaperscissors" asChild>
-              <TouchableOpacity style={styles.button}>
-                <Text style={styles.buttonText}>Piedra, Papel o Tijera</Text>
-              </TouchableOpacity>
-            </Link>
-
-            <Link href="/quadratic" asChild>
-              <TouchableOpacity style={styles.button}>
-                <Text style={styles.buttonText}>Ecuación Cuadrática</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, styles.logoutButton]}
-            onPress={() => setIsLoggedIn(false)}
-          >
-            <Text style={styles.buttonText}>Cerrar Sesión</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+                <Text
+                  style={[
+                    styles.artist,
+                    { color: colorScheme === "dark" ? "#ccc" : "#666" },
+                  ]}
+                >
+                  {item.artist}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </Link>
+        )}
+      />
     </View>
   );
 }
@@ -137,74 +83,65 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
   },
-  menuContainer: {
-    width: "100%",
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
+  },
+  songItem: {
+    flexDirection: "row",
+    padding: 10,
+    alignItems: "center",
+  },
+  thumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
+  },
+  songInfo: {
+    marginLeft: 15,
+    flex: 1,
   },
   title: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 20,
-    fontFamily: "SpaceMono",
   },
-  subtitle: {
+  artist: {
+    fontSize: 14,
+  },
+  albumArt: {
+    width: Dimensions.get("window").width - 40,
+    height: Dimensions.get("window").width - 40,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  infoContainer: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  songTitle: {
     fontSize: 20,
-    marginBottom: 20,
-    fontFamily: "SpaceMono",
-  },
-  infoText: {
-    marginBottom: 20,
-    textAlign: "center",
-    fontFamily: "SpaceMono",
-  },
-  input: {
-    width: "100%",
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    marginBottom: 15,
-  },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 20,
-  },
-  buttonContainer: {
-    width: "100%",
-    gap: 15,
-  },
-  button: {
-    backgroundColor: "#6200ee",
-    padding: 15,
-    borderRadius: 5,
-    alignItems: "center",
-    width: "100%",
-    marginBottom: 10,
-  },
-  logoutButton: {
-    backgroundColor: "#dc3545",
-    marginTop: 20,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 5,
   },
-  resultContainer: {
-    marginTop: 20,
-    alignItems: "center",
-  },
-  resultText: {
-    fontSize: 18,
-    marginBottom: 10,
-    fontFamily: "SpaceMono",
-  },
-  errorText: {
+  songArtist: {
     fontSize: 16,
     textAlign: "center",
-    fontFamily: "SpaceMono",
+  },
+  controls: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  playButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
